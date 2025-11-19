@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J.U.N.E. — Dossier Viewer</title>
+  <link rel="icon" href="assets/J.U.N.E.ico" type="image/x-icon">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header" style="margin-bottom:12px;">
+    <div class="site-left">
+      <button class="logo-badge" onclick="location.href='index.html'">
+        <img src="assets/J.U.N.E.ico" class="logo-img" alt="JUNE">
+      </button>
+      <div class="brand-text"><div class="site-title">Dossier Viewer</div><div class="tagline">Agent Files & Field Reports</div></div>
+    </div>
+    <nav class="main-nav">
+      <a class="nav-link" href="index.html">Dashboard</a>
+      <a class="nav-link" href="news.html">News</a>
+      <a class="nav-link active" href="dossier.html">Dossiers</a>
+      <button class="btn btn-ghost" onclick="location.href='admin-login.html'">Admin</button>
+    </nav>
+  </header>
+
+  <main class="container" style="grid-template-columns: 340px 1fr;">
+    <!-- Left: agent list / quick select -->
+    <aside class="panel" style="height: fit-content;">
+      <h3>Agents</h3>
+      <div id="d_agentList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <!-- Dynamically populated -->
+      </div>
+      <div style="margin-top:12px">
+        <button id="btnPrev" class="btn ghost small">Prev</button>
+        <button id="btnNext" class="btn ghost small">Next</button>
+      </div>
+    </aside>
+
+    <!-- Right: dossier content -->
+    <section class="panel" id="dossierPanel" aria-live="polite">
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <img id="dAvatar" class="agent-avatar" src="" alt="Agent avatar" style="width:120px;height:120px;border-radius:12px">
+        <div style="flex:1">
+          <h2 id="dCodename">—</h2>
+          <div id="dRole" class="muted">—</div>
+          <div id="dLast" class="muted small" style="margin-top:6px">—</div>
+        </div>
+        <div style="min-width:120px;text-align:right">
+          <div style="margin-bottom:8px"><strong id="dThreat">Threat: —</strong></div>
+          <button id="replayBtn" class="btn small">Replay Report</button>
+        </div>
+      </div>
+
+      <hr style="margin:12px 0;border-color: rgba(255,255,255,0.03)">
+
+      <article>
+        <h3>Field Report</h3>
+        <pre id="dReport" class="info-text" style="white-space:pre-wrap;padding:12px;border-radius:8px;background:#031215;border:1px solid rgba(255,255,255,0.02);min-height:240px">No dossier loaded.</pre>
+      </article>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button id="backBtn" class="btn ghost">Back</button>
+        <button id="downloadBtn" class="btn small">Download Report</button>
+        <div style="flex:1"></div>
+        <div id="dStatus" class="muted small">Loaded: —</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">© J.U.N.E.</footer>
+
+  <script src="dossier.js"></script>
+</body>
+</html>

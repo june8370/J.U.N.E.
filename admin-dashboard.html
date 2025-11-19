@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J.U.N.E. — Admin Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="assets/J.U.N.E.ico">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Small page-specific adjustments for the admin dashboard */
+    .admin-header-actions { display:flex; gap:8px; align-items:center; }
+    .admin-grid { display:grid; grid-template-columns: 320px 1fr; gap:18px; max-width:1200px; margin:18px auto; padding:0 20px; }
+    aside.panel { padding:18px; }
+    #paneContent { min-height:320px; }
+    .admin-box { display:block; padding:12px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.06)); margin-bottom:8px; color:var(--accent); text-decoration:none; }
+    .small-muted { color:var(--muted); font-size:13px; margin-top:8px; }
+  </style>
+</head>
+<body>
+
+  <header class="panel" style="margin:12px 20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div>
+        <strong style="font-size:18px">ADMIN CONTROL CENTER</strong>
+        <div class="small-muted">J.U.N.E. operations — admin console</div>
+      </div>
+      <div class="admin-header-actions">
+        <button id="goHome" class="btn btn-ghost" title="Return to site">Home</button>
+        <button id="signOut" class="btn danger" title="Sign out">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-grid" role="main" aria-label="Admin dashboard">
+    <aside class="panel" aria-label="Admin actions">
+      <h3>Actions</h3>
+      <button id="navAgents" class="btn" style="width:100%;text-align:left">Manage Agents</button>
+      <button id="navTasks" class="btn" style="width:100%;text-align:left;margin-top:8px">Assign Tasks</button>
+      <button id="navMonitor" class="btn" style="width:100%;text-align:left;margin-top:8px">Monitoring</button>
+      <button id="navAudit" class="btn" style="width:100%;text-align:left;margin-top:8px">Audit Log</button>
+      <button id="navSettings" class="btn" style="width:100%;text-align:left;margin-top:8px">Admin Settings</button>
+
+      <div style="margin-top:16px">
+        <h4>Quick</h4>
+        <a class="admin-box" href="#" id="quickCreateAgent">+ Create agent</a>
+        <a class="admin-box" href="#" id="quickAssignTask">+ Assign task</a>
+      </div>
+
+      <div style="margin-top:12px" class="small-muted">
+        Session: <span id="adminSessionUser">—</span><br>
+        <small>Actions are logged to the audit trail.</small>
+      </div>
+    </aside>
+
+    <section class="panel" id="adminMain" aria-live="polite">
+      <h3 id="paneTitle">Welcome, Director</h3>
+      <div id="paneContent" style="margin-top:12px">
+        <!-- Dynamic admin content will be rendered here by script.js -->
+        <p class="small-muted">Use the left-hand actions to manage agents, tasks, and monitoring. If this area does not populate, ensure your <code>script.js</code> (or <code>admin.js</code>) from the J.U.N.E. package is loaded and defines <code>window.showAdminPane</code>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer style="max-width:1200px;margin:24px auto;padding:0 20px;color:var(--muted)">J.U.N.E. — Admin Console</footer>
+
+  <!-- Core site/admin script that contains the admin logic.
+       If you split admin code into admin.js, include it here instead or in addition. -->
+  <script src="script.js"></script>
+  <!-- If you have a separate admin.js, include it too (uncomment): -->
+  <!-- <script src="admin.js"></script> -->
+
+  <script>
+    // protect page: redirect to login if no session
+    (function(){
+      try {
+        const s = sessionStorage.getItem('june_admin_session');
+        if(!s){
+          // no session: redirect to login
+          window.location.href = 'admin-login.html';
+          return;
+        } else {
+          const info = JSON.parse(s);
+          document.getElementById('adminSessionUser').textContent = info.user || 'admin';
+        }
+      } catch(e){
+        window.location.href = 'admin-login.html';
+        return;
+      }
+    })();
+
+    // basic nav wiring: calls the showAdminPane function provided by your JS
+    document.getElementById('goHome').addEventListener('click', ()=> window.location.href = 'index.html');
+    document.getElementById('signOut').addEventListener('click', ()=> {
+      sessionStorage.removeItem('june_admin_session');
+      // optionally clear sensitive localStorage entries here in demo mode
+      window.location.href = 'admin-login.html';
+    });
+
+    function tryShow(pane){
+      if(typeof window.showAdminPane === 'function'){
+        window.showAdminPane(pane);
+      } else {
+        // fallback: show a simple placeholder if the admin JS is not loaded
+        const title = document.getElementById('paneTitle');
+        const content = document.getElementById('paneContent');
+        title.textContent = pane.charAt(0).toUpperCase() + pane.slice(1);
+        content.innerHTML = '<div class="panel"><p class="small-muted">Admin logic not loaded. Please include <code>script.js</code> (or <code>admin.js</code>) that implements admin panes.</p></div>';
+      }
+    }
+
+    document.getElementById('navAgents').addEventListener('click', ()=> tryShow('agents'));
+    document.getElementById('navTasks').addEventListener('click', ()=> tryShow('tasks'));
+    document.getElementById('navMonitor').addEventListener('click', ()=> tryShow('monitor'));
+    document.getElementById('navAudit').addEventListener('click', ()=> tryShow('audit'));
+    document.getElementById('navSettings').addEventListener('click', ()=> tryShow('settings'));
+
+    // quick links
+    document.getElementById('quickCreateAgent').addEventListener('click', (e)=>{ e.preventDefault(); tryShow('agents'); });
+    document.getElementById('quickAssignTask').addEventListener('click', (e)=>{ e.preventDefault(); tryShow('tasks'); });
+
+    // try to show default pane (agents)
+    window.addEventListener('DOMContentLoaded', ()=> tryShow('agents'));
+  </script>
+</body>
+</html>

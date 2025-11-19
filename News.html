@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J.U.N.E. — Intel News</title>
+  <link rel="icon" href="assets/J.U.N.E.ico" type="image/x-icon">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header (same as other pages) -->
+  <header class="site-header">
+    <div class="site-left">
+      <button class="logo-badge" onclick="location.href='index.html'">
+        <img src="assets/J.U.N.E.ico" class="logo-img" alt="JUNE">
+      </button>
+      <div class="brand-text">
+        <div class="site-title">Intel News</div>
+        <div class="tagline">Secure intelligence updates — simulated feed</div>
+      </div>
+    </div>
+
+    <nav class="main-nav" role="navigation">
+      <a class="nav-link" href="index.html">Dashboard</a>
+      <a class="nav-link active" href="news.html">News</a>
+      <a class="nav-link" href="dossier.html">Dossiers</a>
+      <button class="btn btn-ghost" onclick="location.href='admin-login.html'">Admin</button>
+    </nav>
+  </header>
+
+  <main class="container" style="grid-template-columns: 1fr 340px;">
+    <section class="panel" id="newsPanel">
+      <h2>Global Intelligence Feed</h2>
+      <p class="muted">Latest secure-sourced reports (simulated). Use the controls to mark items, download, or export.</p>
+
+      <div id="newsControls" style="display:flex;gap:10px;margin:12px 0;">
+        <button id="refreshBtn" class="btn ghost small">Refresh</button>
+        <button id="exportBtn" class="btn small">Export All</button>
+        <div style="flex:1"></div>
+        <label class="muted" style="align-self:center">Mode:</label>
+        <select id="modeSelect" class="input" style="width:160px;">
+          <option value="live">Live (fetch)</option>
+          <option value="sample">Sample (local)</option>
+        </select>
+      </div>
+
+      <div id="newsList" style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <!-- articles inserted here -->
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h3>Important / Saved</h3>
+      <div id="savedList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <!-- saved items -->
+      </div>
+
+      <hr style="margin:12px 0;border-color:rgba(255,255,255,0.03)">
+
+      <h4>Search Archive</h4>
+      <input id="searchInput" class="input" placeholder="Search titles or body" />
+      <div style="margin-top:8px">
+        <button id="searchBtn" class="btn ghost small">Search</button>
+        <button id="clearSearchBtn" class="btn small">Clear</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="site-footer">© J.U.N.E. — Demo feed</footer>
+
+<script>
+/* news.html script — lightweight feed with fallback, important marking & export */
+
+// Keys
+const SAVED_KEY = 'june_news_saved_v1';
+const MODE_KEY  = 'june_news_mode_v1';
+
+// Sample fallback articles (if fetch fails)
+const SAMPLE_NEWS = [
+  { id:'s1', title:'SIGINT Sweep Complete', body:'Signals sweep across sector cluster shows reduced chatter.' },
+  { id:'s2', title:'Compromised Relay Isolated', body:'Relay node 11 removed from routing. Forensics ongoing.' },
+  { id:'s3', title:'New Asset Deployed', body:'Deep cover asset placed in sector 9.' },
+  { id:'s4', title:'Cyber Ops: Firewall Hardened', body:'Perimeter firewall policies updated after intrusion attempt.' }
+];
+
+// DOM
+const newsList = document.getElementById('newsList');
+const savedList = document.getElementById('savedList');
+const refreshBtn = document.getElementById('refreshBtn');
+const exportBtn = document.getElementById('exportBtn');
+const modeSelect = document.getElementById('modeSelect');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+// state
+let articles = [];
+let saved = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
+let mode = localStorage.getItem(MODE_KEY) || 'live';
+
+// init
+modeSelect.value = mode;
+
+function renderSaved(){
+  savedList.innerHTML = '';
+  if(saved.length === 0){ savedList.innerHTML = '<div class="muted">No saved items</div>'; return; }
+  saved.forEach(a=>{
+    const item = document.createElement('div');
+    item.className = 'admin-box';
+    item.style.display = 'flex'; item.style.justifyContent='space-between'; item.style.alignItems='center';
+    const left = document.createElement('div');
+    left.innerHTML = `<strong style="display:block">${escapeHtml(a.title)}</strong><div class="muted small">${escapeHtml(truncate(a.body,120))}</div>`;
+    const actions = document.createElement('div');
+    actions.innerHTML = `<button class="btn small" data-id="${a.id}" data-act="open">Open</button> <button class="btn small" data-id="${a.id}" data-act="rem">Remove</button>`;
+    item.appendChild(left); item.appendChild(actions);
+    savedList.appendChild(item);
+
+    actions.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', (e)=>{
+        const act = b.dataset.act, id = b.dataset.id;
+        if(act === 'open'){ openArticleById(id); }
+        if(act === 'rem'){ saved = saved.filter(x=>x.id !== id); persistSaved(); renderSaved(); renderNewsList(); }
+      });
+    });
+  });
+}
+
+function persistSaved(){
+  localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+}
+
+function setMode(m){
+  mode = m; localStorage.setItem(MODE_KEY, mode);
+}
+
+// safe HTML escape
+function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function truncate(s, n=140){ return s.length > n ? s.slice(0,n)+'…' : s; }
+
+// open article (scroll into view)
+function openArticleById(id){
+  const el = newsList.querySelector(`[data-art="${id}"]`);
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('highlight'); setTimeout(()=>el.classList.remove('highlight'),1200); }
+}
+
+// render main news list
+function renderNewsList(filterText=''){
+  newsList.innerHTML = '';
+  const list = articles.filter(a => {
+    if(!filterText) return true;
+    const q = filterText.toLowerCase();
+    return (a.title||'').toLowerCase().includes(q) || (a.body||'').toLowerCase().includes(q);
+  });
+
+  if(list.length === 0){ newsList.innerHTML = '<div class="muted">No articles found</div>'; return; }
+
+  list.forEach(a=>{
+    const card = document.createElement('article');
+    card.className = 'panel';
+    card.setAttribute('data-art', a.id);
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <h3 style="margin:0 0 6px 0">${escapeHtml(a.title)}</h3>
+          <div class="muted small">${escapeHtml(truncate(a.body,220))}</div>
+        </div>
+        <div style="margin-left:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <button class="btn small" data-id="${a.id}" data-act="view">View</button>
+          <button class="btn small" data-id="${a.id}" data-act="save">${isSaved(a.id) ? 'Saved' : 'Save'}</button>
+          <button class="btn small" data-id="${a.id}" data-act="dl">DL</button>
+        </div>
+      </div>
+    `;
+    newsList.appendChild(card);
+
+    // actions
+    card.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const act = b.dataset.act, id = b.dataset.id;
+        if(act === 'view'){ viewArticle(id); }
+        if(act === 'save'){ toggleSaveArticle(id); b.textContent = isSaved(id) ? 'Saved' : 'Save'; }
+        if(act === 'dl'){ downloadArticleById(id); }
+      });
+    });
+  });
+}
+
+function isSaved(id){ return saved.some(x=>x.id === id); }
+function toggleSaveArticle(id){
+  const a = articles.find(x=>x.id === id);
+  if(!a) return;
+  if(isSaved(id)){ saved = saved.filter(x=>x.id !== id); }
+  else saved.unshift(a);
+  persistSaved();
+  renderSaved();
+  renderNewsList(searchInput.value.trim());
+}
+
+function viewArticle(id){
+  const a = articles.find(x=>x.id === id);
+  if(!a) return;
+  // show modal-ish viewer (simple)
+  const text = `Title: ${a.title}\n\n${a.body}`;
+  alert(text);
+}
+
+// download single article
+function downloadArticleById(id){
+  const a = articles.find(x=>x.id === id);
+  if(!a) return;
+  const blob = new Blob([`Title: ${a.title}\n\n${a.body}`], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a'); link.href = url; link.download = `${(a.title||'article').replace(/[^a-z0-9]/gi,'_').slice(0,40)}.txt`;
+  document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+}
+
+// export all (download JSON)
+function exportAll(){
+  const blob = new Blob([JSON.stringify(articles, null, 2)], { type:'application/json' });
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'june_news_export.json';
+  document.body.appendChild(link); link.click(); link.remove();
+}
+
+// load articles (fetch then fallback)
+async function loadArticles(){
+  // if mode = sample, use sample
+  if(mode === 'sample'){
+    articles = SAMPLE_NEWS.slice();
+    renderNewsList();
+    return;
+  }
+
+  // try fetch
+  try {
+    const resp = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=8', { cache:'no-store' });
+    if(!resp.ok) throw new Error('bad response');
+    const data = await resp.json();
+    // shape into articles
+    articles = data.map(d => ({ id: 'p'+d.id, title: d.title, body: d.body }));
+  } catch(err){
+    console.warn('news fetch failed, falling back to sample', err);
+    articles = SAMPLE_NEWS.slice();
+  }
+  renderNewsList();
+}
+
+// search
+searchBtn.addEventListener('click', ()=> renderNewsList(searchInput.value.trim()));
+clearSearchBtn.addEventListener('click', ()=> { searchInput.value=''; renderNewsList(); });
+
+// refresh & export & mode
+refreshBtn.addEventListener('click', ()=> loadArticles());
+exportBtn.addEventListener('click', ()=> exportAll());
+modeSelect.addEventListener('change', (e)=> { setMode(e.target.value); loadArticles(); });
+
+// helpers
+function setMode(m){ mode = m; localStorage.setItem(MODE_KEY, m); }
+function truncate(s,n=120){ return s && s.length>n ? s.slice(0,n)+'…' : s; }
+
+// boot
+document.addEventListener('DOMContentLoaded', ()=>{
+  // read persisted saved & mode
+  try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch(e){ saved = []; }
+  try { const m = localStorage.getItem(MODE_KEY); if(m) { mode = m; modeSelect.value = m; } } catch(e){}
+  renderSaved();
+  loadArticles();
+});
+</script>
+
+</body>
+</html>

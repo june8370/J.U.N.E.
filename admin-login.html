@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J.U.N.E. — Admin Login</title>
+
+  <!-- If you already have style.css for the site, the page will inherit it.
+       This file contains embedded CSS so it will render properly standalone. -->
+  <style>
+    :root{
+      --bg:#031017;
+      --panel:#04171a;
+      --muted:#7ea6b3;
+      --text:#d9ecf2;
+      --accent:#00f7ff;
+      --accent-2:#12b886;
+      --danger:#ff3b4b;
+      --radius:12px;
+    }
+
+    html,body{height:100%;margin:0;font-family:"JetBrains Mono",Consolas,monospace;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    /* Centering frame */
+    .page {
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding-top:64px;
+    }
+
+    /* compact card */
+    .card {
+      width: min(520px, 92%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.22));
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 18px 50px rgba(0,0,0,0.6), 0 4px 12px rgba(0,255,255,0.02);
+      padding:22px;
+      backdrop-filter: blur(6px);
+      transition: transform .18s ease;
+    }
+    .card:active{ transform: translateY(1px); }
+
+    .card h2{ margin:0 0 8px 0; font-size:20px; }
+
+    .card p.muted { color:var(--muted); font-size:13px; margin:8px 0 16px; }
+
+    /* Input rows - compact inline labels */
+    .row {
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+    }
+    .row label {
+      width:86px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .input {
+      flex:1;
+      min-width:160px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.04);
+      background:#061b20;
+      color:var(--text);
+      outline:none;
+      transition: box-shadow .12s ease, border-color .12s ease;
+    }
+    .input:focus {
+      box-shadow: 0 6px 20px rgba(0,255,255,0.06);
+      border-color: rgba(0,255,255,0.12);
+    }
+
+    /* Controls */
+    .controls { display:flex; gap:10px; align-items:center; margin-top:12px; }
+    .btn {
+      padding:8px 12px;
+      border-radius:8px;
+      border:none;
+      cursor:pointer;
+      font-weight:700;
+      letter-spacing:0.4px;
+    }
+    .btn.primary {
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      color:#02121a;
+      box-shadow: 0 8px 30px rgba(0,255,255,0.06);
+    }
+    .btn.ghost {
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.03);
+      color:var(--muted);
+    }
+    .small-link {
+      color:var(--muted);
+      text-decoration:underline;
+      font-size:13px;
+      background:none;
+      border:none;
+      cursor:pointer;
+    }
+
+    /* compact desktop layout */
+    @media (min-width:560px){
+      /* make the form narrower and center the small card horizontally */
+      .card { width:420px; }
+      .row label { width:86px; }
+    }
+
+    /* subtle footer text */
+    .login-footer { margin-top:12px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+    .error { color:var(--danger); font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card" role="main" aria-labelledby="loginTitle">
+      <h2 id="loginTitle">Administrator Login</h2>
+      <p class="muted">Authorized personnel only. (Hidden shortcut: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd>)</p>
+
+      <div class="row">
+        <label for="adminUser">Username</label>
+        <input id="adminUser" class="input" autocomplete="username" />
+      </div>
+
+      <div class="row">
+        <label for="adminPass">Password</label>
+        <input id="adminPass" class="input" type="password" autocomplete="current-password" />
+      </div>
+
+      <div class="controls">
+        <button id="doLogin" class="btn primary">Sign in</button>
+        <button id="goBack" class="btn ghost">Back</button>
+        <div style="flex:1"></div>
+        <div id="loginMsg" class="login-footer">
+          <span id="status" class="muted"></span>
+        </div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+        <small class="muted">Tip: press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> from homepage</small>
+        <button id="forgotBtn" class="small-link" title="Reset admin (demo)">Forgot?</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Admin login logic (client-side demo).
+  - Default admin credentials created on first load: director_admin / JUNE!R8pQ2
+  - Password stored as base64 encoded string in localStorage (demo only — not secure).
+*/
+(function(){
+  const ADMIN_KEY = 'june_admin_v1';
+  // ensure defaults
+  try {
+    if(!localStorage.getItem(ADMIN_KEY)){
+      const defaultAdmin = { username: 'director_admin', passHash: btoa('JUNE!R8pQ2') };
+      localStorage.setItem(ADMIN_KEY, JSON.stringify(defaultAdmin));
+    }
+  } catch(e) { console.warn('admin init failed', e); }
+
+  const userIn = document.getElementById('adminUser');
+  const passIn = document.getElementById('adminPass');
+  const btn = document.getElementById('doLogin');
+  const back = document.getElementById('goBack');
+  const status = document.getElementById('status');
+  const forgot = document.getElementById('forgotBtn');
+
+  // helper
+  function getAdmin(){ try { return JSON.parse(localStorage.getItem(ADMIN_KEY) || '{}'); } catch(e){ return {}; } }
+  function setSession(user){ sessionStorage.setItem('june_admin_session', JSON.stringify({user, at: new Date().toISOString()})); }
+
+  btn.addEventListener('click', function(){
+    const admin = getAdmin();
+    const u = (userIn.value || '').trim();
+    const p = passIn.value || '';
+    if(!u || !p){ status.textContent = 'Enter credentials'; status.style.color = 'var(--muted)'; return; }
+    if(u === admin.username && btoa(p) === admin.passHash){
+      setSession(admin.username);
+      status.textContent = 'Authenticated — redirecting…';
+      status.style.color = 'var(--accent)';
+      // small delay so user sees the message
+      setTimeout(()=> { window.location.href = 'admin-dashboard.html'; }, 350);
+    } else {
+      status.textContent = 'Invalid credentials';
+      status.style.color = 'var(--danger)';
+      // small hint for demo
+      passIn.value = '';
+    }
+  });
+
+  // Enter key triggers login
+  [userIn, passIn].forEach(el => el.addEventListener('keydown', (e)=> {
+    if(e.key === 'Enter') btn.click();
+  }));
+
+  back.addEventListener('click', ()=> window.location.href = 'index.html');
+
+  // Forgot resets to demo credentials (only in demo mode)
+  forgot.addEventListener('click', ()=>{
+    if(!confirm('Reset admin credentials to demo defaults?')) return;
+    const demo = { username: 'director_admin', passHash: btoa('JUNE!R8pQ2') };
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(demo));
+    alert('Admin reset to credentials:\nusername: director_admin\npassword: JUNE!R8pQ2');
+  });
+
+  // Accessibility: focus username input on load
+  userIn.focus();
+})();
+</script>
+</body>
+</html>

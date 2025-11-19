@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>J.U.N.E. — Command Interface</title>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/x-icon" href="assets/J.U.N.E.ico">
+
+  <!-- main stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-left">
+      <!-- teal rounded badge (click to edit title) -->
+      <button id="logoBadge" class="logo-badge" aria-label="J.U.N.E. emblem" title="Click to edit site title">
+        <img src="assets/J.U.N.E.ico" alt="J.U.N.E. logo" class="logo-img">
+      </button>
+
+      <!-- title + small tagline -->
+      <div class="brand-text">
+        <div id="siteTitle" class="site-title" tabindex="0">J.U.N.E. — Command Interface</div>
+        <div class="tagline">Joint Unified National Elite</div>
+      </div>
+    </div>
+
+    <nav class="main-nav" role="navigation" aria-label="Primary">
+      <a href="index.html" class="nav-link active">Dashboard</a>
+      <a href="news.html" class="nav-link">News</a>
+      <a href="dossier.html" class="nav-link">Dossiers</a>
+      <button id="adminBtn" class="btn btn-ghost">Admin</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="panel welcome">
+      <h2>Welcome, Operative</h2>
+      <p>This is your original homepage content — left intact and styled with the new theme.</p>
+      <div class="actions">
+        <a href="dossier.html" class="btn">Open Dossier Viewer</a>
+        <a href="news.html" class="btn">Open Intel News</a>
+      </div>
+    </section>
+
+    <aside class="panel sidebar">
+      <h3>Active Operatives</h3>
+      <div id="agentGrid" class="agent-grid" aria-live="polite"></div>
+    </aside>
+
+    <section class="panel terminal">
+      <h3>Terminal Feed</h3>
+      <div class="terminal-window"><pre id="terminalContent" class="terminal-content">System ready. Start feed to receive live intel.</pre></div>
+      <div class="terminal-controls">
+        <button id="startFeed" class="btn small">Start</button>
+        <button id="pauseFeed" class="btn small">Pause</button>
+        <button id="clearFeed" class="btn small">Clear</button>
+      </div>
+    </section>
+
+    <section class="panel notice">
+      <h3>⚠ Security Notice</h3>
+      <p>Unauthorized access is punishable under the Defence Security Act. Continuous surveillance active.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">© J.U.N.E.</footer>
+
+  <script>
+    // --- Editable title via badge (click) ---
+    const badge = document.getElementById('logoBadge');
+    const siteTitleEl = document.getElementById('siteTitle');
+    const STORAGE_KEY = 'june_site_title_v1';
+
+    // load stored title if present
+    (function(){
+      try {
+        const t = localStorage.getItem(STORAGE_KEY);
+        if (t) siteTitleEl.textContent = t;
+      } catch(e){}
+    })();
+
+    badge.addEventListener('click', () => {
+      const current = siteTitleEl.textContent || '';
+      const ask = prompt('Edit site title (visible in header):', current);
+      if (ask === null) return;
+      const trimmed = ask.trim() || 'J.U.N.E. — Command Interface';
+      siteTitleEl.textContent = trimmed;
+      try { localStorage.setItem(STORAGE_KEY, trimmed); } catch(e){}
+    });
+
+    // allow keyboard editing: focus + Enter allows editing prompt
+    siteTitleEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        badge.click();
+      }
+    });
+
+    // --- Admin login shortcut & Admin button ---
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        location.href = 'admin-login.html';
+      }
+    });
+    document.getElementById('adminBtn').addEventListener('click', () => location.href = 'admin-login.html');
+
+    // --- Agent grid demo data & rendering ---
+    const AGENTS = [
+      { id:'S1', codename:'SHADOW-1', role:'Field Operative', lastSeen:'Sector 7', color:'#06b6d4' },
+      { id:'E7', codename:'ECHO-7', role:'Recon Specialist', lastSeen:'Sector 12', color:'#00f7ff' },
+      { id:'V3', codename:'VIPER-3', role:'Cyber Warfare', lastSeen:'Sector 3', color:'#ff6b6b' },
+      { id:'LT', codename:'LADY TIGER', role:'Surveillance', lastSeen:'Unknown', color:'#12b886' }
+    ];
+
+    function renderAgents(){
+      const grid = document.getElementById('agentGrid');
+      if(!grid) return;
+      grid.innerHTML = '';
+      AGENTS.forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.innerHTML = `
+          <div class="agent-avatar-badge" style="background:${a.color}">${a.id}</div>
+          <div class="agent-info">
+            <strong class="agent-code">${a.codename}</strong>
+            <div class="muted small">${a.role} • ${a.lastSeen}</div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn small" data-id="${a.id}" onclick="location.href='dossier.html'">Dossier</button>
+            <button class="btn small" data-id="${a.id}" onclick="alert('Simulated login for '+ '${a.codename}')">Login</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+    renderAgents();
+
+    // --- Terminal feed (simple typewriter) ---
+    const terminalContent = document.getElementById('terminalContent');
+    const feedLines = [
+      '[02:02Z] SIGINT: Confirmed probe on northern node.',
+      '[02:14Z] FIELD: Shadow-1 reported fallback comms active.',
+      '[03:01Z] CYBER: Suspicious auth attempt blocked.',
+      '[03:22Z] FORENSICS: New artifact stored in archive-7.',
+      '[04:00Z] RECON: Drone swarm detected over sector 12.'
+    ];
+    let feedTimer = null, idx = 0, paused = false;
+
+    function typeLine(text, speed=14){
+      const line = document.createElement('div');
+      terminalContent.appendChild(line);
+      let i=0;
+      function step(){
+        if (i < text.length) {
+          line.textContent += text[i++];
+          terminalContent.parentElement.scrollTop = terminalContent.parentElement.scrollHeight;
+          setTimeout(step, speed);
+        }
+      }
+      step();
+    }
+
+    document.getElementById('startFeed').addEventListener('click', ()=>{
+      if (feedTimer) return;
+      paused = false;
+      feedTimer = setInterval(()=> {
+        if (!paused) typeLine(feedLines[idx++ % feedLines.length]);
+      }, 900);
+    });
+    document.getElementById('pauseFeed').addEventListener('click', ()=> paused = true);
+    document.getElementById('clearFeed').addEventListener('click', ()=> { terminalContent.textContent = ''; idx = 0; paused = false; clearInterval(feedTimer); feedTimer = null; });
+
+  </script>
+</body>
+</html>
